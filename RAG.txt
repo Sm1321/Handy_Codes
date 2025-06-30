@@ -31,3 +31,14 @@ text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(chunk_size=
 doc_splits = text_splitter.split_documents(docs_list)
 doc_splits
 
+
+########################### Chroma Vector Store #################################
+from langchain_community.vectorstores import Chroma
+
+vectorstore=Chroma.from_documents(
+    documents=doc_splits,
+    collection_name="rag-chrome",
+    embedding=embeddings
+    
+)
+
