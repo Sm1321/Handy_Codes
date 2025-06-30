@@ -1,0 +1,16 @@
+import os
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI()
+llm.invoke("Hello how are you")
+
+
+from langchain_openai import OpenAIEmbeddings
+embeddings  = OpenAIEmbeddings(
+    model = "text-embedding-3-large"
+)
+
+embeddings .embed_query("hello how are you?")
