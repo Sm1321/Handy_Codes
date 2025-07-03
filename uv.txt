@@ -1,7 +1,12 @@
-#### uv package
+######################################### uv package  ####################################################
 
-
+######## It will install the UV Package ##############
 - pip install uv  #To install the UV Package
-- uv init
-- 
+
+#### init the UV
+-uv init
+
+#### It will give all the python installed and available i  our system
+- uv python list
+- uv python install python version
 - 
