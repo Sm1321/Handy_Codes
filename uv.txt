@@ -4,7 +4,7 @@
 - pip install uv  #To install the UV Package
 
 #### init the UV
--uv init
+- uv init
 
 #### It will give all the python installed and available i  our system
 - uv python list
