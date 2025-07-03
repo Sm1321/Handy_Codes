@@ -1,0 +1,7 @@
+#### uv package
+
+
+- pip install uv  #To install the UV Package
+- uv init
+- 
+- 
