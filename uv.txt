@@ -8,6 +8,8 @@
 
 #### It will give all the python installed and available i  our system
 - uv python list
+
 ##### in the python version we will keep the specified python version Avaliable in our system
 - uv python install python version
+
 - uv pip list ### to see the list of libraries installed
