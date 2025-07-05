@@ -1,0 +1,6 @@
+from langchain_community.tools import DuckDuckGoSearchRun
+
+def search_fun(state:AgentState):
+    search = DuckDuckGoSearchRun()
+    result = search.invoke({"query":state["messages"][0]})
+    return {"messages": [result]}
