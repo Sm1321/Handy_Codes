@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+model = "deepseek-r1-distill-llama-70b"
 
 ########## Groq ###############
 from langchain_groq import ChatGroq
