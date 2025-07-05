@@ -23,3 +23,12 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import HumanMessage, AIMessage
 
 from langgraph.graph import StateGraph,END,START
+
+
+
+
+
+######### Pydantic Output Parser #########
+from langchain.output_parsers import PydanticOutputParser
+parser = PydanticOutputParser(pydantic_object=TopicSelectionParser)
+parser.get_format_instructions()
