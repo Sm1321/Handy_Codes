@@ -1,6 +1,60 @@
 from langchain_community.tools import DuckDuckGoSearchRun
+from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import tools_condition
+
 
 def search_fun(state:AgentState):
     search = DuckDuckGoSearchRun()
     result = search.invoke({"query":state["messages"][0]})
     return {"messages": [result]}
+
+
+
+
+
+#### Custom Tools ######
+from langchain.tools import tool
+
+@tool
+def multiply(a: int, b: int) -> int:
+    """
+    Multiply two integers.
+
+    Args:
+        a (int): The first integer.
+        b (int): The second integer.
+
+    Returns:
+        int: The product of a and b.
+    """
+    return a * b
+
+@tool
+def add(a: int, b: int) -> int:
+    """
+    Add two integers.
+
+    Args:
+        a (int): The first integer.
+        b (int): The second integer.
+
+    Returns:
+        int: The sum of a and b.
+    """
+    return a + b
+
+@tool
+def divide(a: int, b: int) -> float:
+    """
+    Divide two integers.
+
+    Args:
+        a (int): The numerator.
+        b (int): The denominator (must not be 0).
+
+    Returns:
+        float: The result of division.
+    """
+    if b == 0:
+        raise ValueError("Denominator cannot be zero.")
+    return a / b

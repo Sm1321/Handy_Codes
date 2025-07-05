@@ -17,4 +17,5 @@ embeddings  = OpenAIEmbeddings(
     model = "text-embedding-3-large"
 )
 
-embeddings .embed_query("hello how are you?")
+embeddings.embed_query("hello how are you my friend?")
+len(embeddings.embed_query("hello how are you my friend?"))

@@ -1,0 +1,46 @@
+from langgraph.checkpoint.memory import MemorySaver
+
+
+memory = MemorySaver()
+
+
+
+#Workflow 
+workflow3 = StateGraph(MessagesState)
+
+workflow3.add_node("llmwithtool",call_model)
+workflow3.add_node("mytools",tool_node)
+
+workflow3.add_edge(START,"llmwithtool")
+workflow3.add_conditional_edges("llmwithtool",
+                                router_function,
+                                {"tools":"mytools",
+                                 END:END})
+
+workflow3.add_edge("mytools","llmwithtool")
+
+
+app4 = workflow3.compile(checkpointer=memory)
+
+from IPython.display import Image, display
+display(Image(app4.get_graph().draw_mermaid_png()))
+
+##Config
+config = {"configurable": {"thread_id": "1"}}
+
+
+###
+events = app4.stream(
+    {"messages":["what is a weather in new delhi?"]},config=config,stream_mode="values"
+    )
+
+
+#### Print #####
+for event in events:
+    event["messages"][-1].pretty_print()
+    
+
+
+### Get the history ###
+memory.get(config)
+
