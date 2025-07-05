@@ -1,0 +1,5 @@
+####### Hugging Face Embeddings ########
+
+from langchain_huggingface import HuggingFaceEmbeddings
+embeddings = HuggingFaceEmbeddings(model = "BAAI/bge-small-en")
+len(embeddings.embed_query("hi"))

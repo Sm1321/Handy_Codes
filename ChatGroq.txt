@@ -1,0 +1,13 @@
+import os
+
+######## Load the Env ############
+from dotenv import load_dotenv
+load_dotenv()
+
+
+
+########## Groq ###############
+from langchain_groq import ChatGroq
+model = ChatGroq(model = "llama-3.1-8b-instant")
+output = model.invoke("Hi")
+output.content
