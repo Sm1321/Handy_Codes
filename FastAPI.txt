@@ -6,7 +6,7 @@ from fastapi import FastAPI,Path,HTTPException,Query
 app = FastAPI()
 
 
-# Routes Creation
+##############################   Routes Creation ###################################
 @app.get('/')
 def hello():
     return {'messages':"Paitent Managemnet system API"}
@@ -23,3 +23,13 @@ def about():
 def view():
     data = load_data()
     return data 
+
+####################################################################################
+
+
+Open in browser:
+🌐 http://127.0.0.1:8000 → Home
+
+📘 http://127.0.0.1:8000/docs → Swagger UI
+
+📙 http://127.0.0.1:8000/redoc → ReDoc UI
