@@ -1,0 +1,8 @@
+from fastapi import FastAPI,Path,HTTPException,Query
+
+
+
+#####################################################################
+app = FastAPI()
+
+
