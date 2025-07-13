@@ -1,0 +1,112 @@
+import os
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+
+import logging
+
+# ===== CONFIGURATION =====
+DATA_PATH = "data"  # Directory with your PDFs
+DB_FAISS_PATH = "vectorstore/faiss_index"
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
+
+# ===== LOGGER SETUP =====
+def get_logger(name):
+    logging.basicConfig(level=logging.INFO)
+    return logging.getLogger(name)
+
+logger = get_logger(__name__)
+
+# ===== CUSTOM EXCEPTION =====
+class CustomException(Exception):
+    def __init__(self, message, error=None):
+        super().__init__(f"{message}: {error}")
+        self.message = message
+        self.original_error = error
+
+# ===== LOAD EMBEDDING MODEL =====
+def get_embedding_model():
+    try:
+        logger.info("Initializing HuggingFace embedding model...")
+        model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        logger.info("Embedding model loaded successfully.")
+        return model
+    except Exception as e:
+        raise CustomException("Error loading embedding model", e)
+
+# ===== LOAD PDF DOCUMENTS =====
+def load_pdf_files():
+    try:
+        if not os.path.exists(DATA_PATH):
+            raise CustomException("Data path does not exist")
+        logger.info(f"Loading PDF files from: {DATA_PATH}")
+        loader = DirectoryLoader(DATA_PATH, glob="*.pdf")
+        documents = loader.load()
+        if not documents:
+            logger.warning("No PDF documents found.")
+        else:
+            logger.info(f"Fetched {len(documents)} documents.")
+        return documents
+    except Exception as e:
+        raise CustomException("Failed to load PDFs", e)
+
+# ===== SPLIT TEXT INTO CHUNKS =====
+def create_text_chunks(documents):
+    try:
+        if not documents:
+            raise CustomException("No documents to split")
+        logger.info(f"Splitting {len(documents)} documents into chunks...")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
+        )
+        chunks = text_splitter.split_documents(documents)
+        logger.info(f"Generated {len(chunks)} text chunks.")
+        return chunks
+    except Exception as e:
+        raise CustomException("Failed to split documents", e)
+
+# ===== SAVE VECTORSTORE =====
+def save_vector_store(text_chunks):
+    try:
+        if not text_chunks:
+            raise CustomException("No chunks found to save in vectorstore")
+        logger.info("Generating FAISS vectorstore...")
+        embedding_model = get_embedding_model()
+        db = FAISS.from_documents(text_chunks, embedding_model)
+        os.makedirs(os.path.dirname(DB_FAISS_PATH), exist_ok=True)
+        db.save_local(DB_FAISS_PATH)
+        logger.info("Vectorstore saved successfully at: " + DB_FAISS_PATH)
+        return db
+    except Exception as e:
+        raise CustomException("Failed to save vectorstore", e)
+
+# ===== LOAD EXISTING VECTORSTORE =====
+def load_vectorstore():
+    try:
+        embedding_model = get_embedding_model()
+        if os.path.exists(DB_FAISS_PATH):
+            logger.info("Loading existing FAISS vectorstore...")
+            return FAISS.load_local(DB_FAISS_PATH, embedding_model, allow_dangerous_deserialization=True)
+        else:
+            logger.warning("No existing vectorstore found.")
+            return None
+    except Exception as e:
+        raise CustomException("Failed to load vectorstore", e)
+
+# ===== MAIN PIPELINE FUNCTION =====
+def process_and_store_pdfs():
+    try:
+        logger.info("Starting PDF processing and vectorstore creation pipeline...")
+        documents = load_pdf_files()
+        text_chunks = create_text_chunks(documents)
+        save_vector_store(text_chunks)
+        logger.info("PDF processing and vectorstore creation completed successfully.")
+    except Exception as e:
+        logger.error(str(e))
+
+# ===== RUN SCRIPT =====
+if __name__ == "__main__":
+    process_and_store_pdfs()
