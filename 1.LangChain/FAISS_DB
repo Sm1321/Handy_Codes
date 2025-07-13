@@ -1,73 +1,90 @@
+
+
+
+
+
+
+
 import os
-import logging
-from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import DirectoryLoader
+from dotenv import load_dotenv
+load_dotenv()
+
+from langchain_groq.chat_models import ChatGroq
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader
+from pathlib import Path
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.llms import HuggingFaceHub
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+import pickle
+from langchain_community.document_loaders import UnstructuredPDFLoader
+
+
+
 
 # === CONFIG ===
 DATA_PATH = "data"
 DB_FAISS_PATH = "vectorstore/faiss_index"
 HUGGINGFACE_REPO_ID = "google/flan-t5-base"
-HF_TOKEN = "your_huggingface_token_here"
+HF_TOKEN = os.getenv("HF_TOKEN")
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
-# === LOGGER ===
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# === CORE FUNCTIONS ===
-def get_embedding_model():
-    return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-def load_pdfs():
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError("PDF data path not found.")
-    return DirectoryLoader(DATA_PATH, glob="*.pdf").load()
+##################################33
+### LLM and Embeddings ###
+llm =  ChatGroq(model = "llama-3.1-8b-instant")
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-def build_vectorstore():
-    docs = load_pdfs()
-    chunks = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
-    ).split_documents(docs)
-    db = FAISS.from_documents(chunks, get_embedding_model())
-    os.makedirs(os.path.dirname(DB_FAISS_PATH), exist_ok=True)
-    db.save_local(DB_FAISS_PATH)
-    logger.info("Vectorstore saved successfully.")
+### Step 1: Load Text Files ###
+loader = DirectoryLoader('./data', glob="*.pdf", loader_cls = PyPDFLoader)
+docs = loader.load()
 
-def load_vectorstore():
-    if not os.path.exists(DB_FAISS_PATH):
-        raise FileNotFoundError("Vectorstore path not found.")
-    return FAISS.load_local(DB_FAISS_PATH, get_embedding_model(), allow_dangerous_deserialization=True)
+### Step 2: Split into Chunks ###
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size = CHUNK_SIZE,
+    chunk_overlap = CHUNK_OVERLAP
+)
+split_docs = text_splitter.split_documents(docs)
 
-def create_qa_chain():
-    retriever = load_vectorstore().as_retriever(search_kwargs={"k": 1})
-    llm = HuggingFaceHub(
-        repo_id=HUGGINGFACE_REPO_ID,
-        huggingfacehub_api_token=HF_TOKEN,
-        model_kwargs={"temperature": 0.5, "max_length": 512}
-    )
+### Step 3: Create or Load FAISS Vector DB ###
+DB_FAISS_PATH = "./faiss_index"
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Answer the medical question using only the given context in 2-3 sentences. If unsure, say 'I don't know'.\nContext: {context}"),
-        ("human", "{input}")
-    ])
+if os.path.exists(DB_FAISS_PATH):
+    # Load FAISS index from disk
+    faiss_index = FAISS.load_local(DB_FAISS_PATH, embeddings, allow_dangerous_deserialization=True)
+else:
+    # Create FAISS index from documents
+    faiss_index = FAISS.from_documents(split_docs, embeddings)
+    faiss_index.save_local(DB_FAISS_PATH)  # Save FAISS index locally
 
-    combine_docs_chain = create_stuff_documents_chain(llm, prompt)
-    return create_retrieval_chain(retriever, combine_docs_chain)
+retriever = faiss_index.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
-# === MAIN ===
-if __name__ == "__main__":
-    try:
-        build_vectorstore()
-        qa_chain = create_qa_chain()
-        question = "What are the symptoms of diabetes?"
-        answer = qa_chain.invoke({"input": question})
-        print("\nAnswer:", answer.get("answer", "No answer returned."))
-    except Exception as e:
-        logger.error(f"Error: {e}")
+
+### Step 4: RAG Prompt Template ###
+template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+"""
+prompt = PromptTemplate.from_template(template)
+
+### Step 5: Retrieval + Generation Chain ###
+retrieval_chain = (
+    RunnableParallel({
+        "context": retriever,
+        "question": RunnablePassthrough()
+    })
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+
+### Step 6: Run Query ###
+question = "what is llama2? can you highlight 2 important points?"
+print(retrieval_chain.invoke(question))
+
