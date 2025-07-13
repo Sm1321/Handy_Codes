@@ -4,11 +4,12 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-from langchain_core.prompts import PromptTemplate
-from langchain.llms import HuggingFaceHub
+from langchain_community.llms import HuggingFaceHub
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 
-# ==== CONFIG ====
+# === CONFIG ===
 DATA_PATH = "data"
 DB_FAISS_PATH = "vectorstore/faiss_index"
 HUGGINGFACE_REPO_ID = "google/flan-t5-base"
@@ -16,60 +17,57 @@ HF_TOKEN = "your_huggingface_token_here"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
-# ==== LOGGER ====
+# === LOGGER ===
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ==== UTILS ====
-class CustomException(Exception):
-    def __init__(self, msg, err=None):
-        super().__init__(f"{msg}: {err}")
-        self.err = err
-
-# ==== CORE FUNCTIONS ====
+# === CORE FUNCTIONS ===
 def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 def load_pdfs():
-    if not os.path.exists(DATA_PATH): raise CustomException("Data path missing")
+    if not os.path.exists(DATA_PATH):
+        raise FileNotFoundError("PDF data path not found.")
     return DirectoryLoader(DATA_PATH, glob="*.pdf").load()
 
-def chunk_documents(docs):
-    return RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP).split_documents(docs)
-
-def build_and_save_vectorstore():
+def build_vectorstore():
     docs = load_pdfs()
-    chunks = chunk_documents(docs)
+    chunks = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+    ).split_documents(docs)
     db = FAISS.from_documents(chunks, get_embedding_model())
     os.makedirs(os.path.dirname(DB_FAISS_PATH), exist_ok=True)
     db.save_local(DB_FAISS_PATH)
-    logger.info("Vectorstore created and saved.")
+    logger.info("Vectorstore saved successfully.")
 
 def load_vectorstore():
-    if os.path.exists(DB_FAISS_PATH):
-        return FAISS.load_local(DB_FAISS_PATH, get_embedding_model(), allow_dangerous_deserialization=True)
-    raise CustomException("Vectorstore not found")
+    if not os.path.exists(DB_FAISS_PATH):
+        raise FileNotFoundError("Vectorstore path not found.")
+    return FAISS.load_local(DB_FAISS_PATH, get_embedding_model(), allow_dangerous_deserialization=True)
 
 def create_qa_chain():
-    db = load_vectorstore()
-    llm = HuggingFaceHub(repo_id=HUGGINGFACE_REPO_ID, huggingfacehub_api_token=HF_TOKEN, model_kwargs={"temperature":0.5})
-    prompt = PromptTemplate(
-        template="""Answer the following medical question in 2-3 lines maximum using only the information provided in the context.
-Context:
-{context}
-Question:
-{question}
-Answer:""",
-        input_variables=["context", "question"]
+    retriever = load_vectorstore().as_retriever(search_kwargs={"k": 1})
+    llm = HuggingFaceHub(
+        repo_id=HUGGINGFACE_REPO_ID,
+        huggingfacehub_api_token=HF_TOKEN,
+        model_kwargs={"temperature": 0.5, "max_length": 512}
     )
-    return RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=db.as_retriever(search_kwargs={"k": 1}), chain_type_kwargs={"prompt": prompt})
 
-# ==== MAIN ====
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "Answer the medical question using only the given context in 2-3 sentences. If unsure, say 'I don't know'.\nContext: {context}"),
+        ("human", "{input}")
+    ])
+
+    combine_docs_chain = create_stuff_documents_chain(llm, prompt)
+    return create_retrieval_chain(retriever, combine_docs_chain)
+
+# === MAIN ===
 if __name__ == "__main__":
     try:
-        build_and_save_vectorstore()
-        qa = create_qa_chain()
-        result = qa.run("What are the symptoms of diabetes?")
-        print("\nAnswer:", result)
+        build_vectorstore()
+        qa_chain = create_qa_chain()
+        question = "What are the symptoms of diabetes?"
+        answer = qa_chain.invoke({"input": question})
+        print("\nAnswer:", answer.get("answer", "No answer returned."))
     except Exception as e:
-        logger.error(str(e))
+        logger.error(f"Error: {e}")
