@@ -1,7 +1,10 @@
-
-
-
-
+#####################  ---------------------------- ############################
+Installtions:-
+! pip install langchain_huggingface -q
+! pip install sentence-transformers -q
+! pip install ipywidgets -q
+! pip install unstructured[pdf] -q
+#####################  ---------------------------- ############################
 
 
 
