@@ -1,0 +1,82 @@
+# 🌐 Python : Virtual Environment Management with `venv`
+
+
+## 📌 Prerequisite
+
+Ensure Python is installed:
+
+```bash
+python --version
+```
+
+---
+
+## 📁 1. Create Virtual Environment
+
+Replace `myenv` with your desired environment name.
+
+### ✅ Windows
+
+```bash
+python -m venv myenv
+```
+
+### ✅ macOS / Linux
+
+```bash
+python -m venv myenv
+```
+
+---
+
+## ▶️ 2. Activate Virtual Environment
+
+### ✅ Windows (Command Prompt)
+
+```bash
+myenv\Scripts\activate
+```
+
+### ✅ Windows (PowerShell)
+
+```bash
+.\myenv\Scripts\Activate.ps1
+```
+
+### ✅ macOS / Linux
+
+```bash
+source myenv/bin/activate
+```
+
+> After activation, your shell prompt will change to show the environment name.
+
+---
+
+## ❌ 3. Deactivate Virtual Environment
+
+Works the same on all platforms:
+
+```bash
+deactivate
+```
+
+---
+
+## 🗑️ 4. Delete Virtual Environment
+
+Simply remove the folder:
+
+### ✅ Windows
+
+```bash
+rmdir /s /q myenv
+```
+
+### ✅ macOS / Linux
+
+```bash
+rm -rf myenv
+```
+
+---
