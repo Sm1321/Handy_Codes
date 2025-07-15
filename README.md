@@ -4,4 +4,5 @@
 -  Code related to Embeddings
 -  Added the Commands to create Virtual Envinormant
   - For Conda Env
-  - 
+  - For Python env
+  - for uv 
