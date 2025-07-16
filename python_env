@@ -62,7 +62,7 @@ deactivate
 ```
 
 
-### deactivate from src
+### Reload your shell (or restart terminal):
 source ~/.bashrc
 
 ## 🗑️ 4. Delete Virtual Environment
