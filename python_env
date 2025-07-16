@@ -61,7 +61,9 @@ Works the same on all platforms:
 deactivate
 ```
 
----
+
+### deactivate from src
+source ~/.bashrc
 
 ## 🗑️ 4. Delete Virtual Environment
 
