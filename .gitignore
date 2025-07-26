@@ -1,0 +1,10 @@
+# Log files
+*.log
+*.log.*
+logs/
+
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
