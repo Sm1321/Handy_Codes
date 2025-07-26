@@ -1,0 +1,64 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+from langchain_google_genai import ChatGoogleGenerativeAI
+import pickle
+
+### LLM and Embeddings ###
+llm = ChatGoogleGenerativeAI(model="gemini-1.0-pro")
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+
+### Step 1: Load Text Files ###
+loader = DirectoryLoader('../data', glob="*.txt", loader_cls=TextLoader)
+docs = loader.load()
+
+### Step 2: Split into Chunks ###
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=50,
+    chunk_overlap=10
+)
+split_docs = text_splitter.split_documents(docs)
+
+### Step 3: Create or Load FAISS Vector DB ###
+DB_FAISS_PATH = "./faiss_index"
+
+if os.path.exists(DB_FAISS_PATH):
+    # Load FAISS index from disk
+    faiss_index = FAISS.load_local(DB_FAISS_PATH, embeddings, allow_dangerous_deserialization=True)
+else:
+    # Create FAISS index from documents
+    faiss_index = FAISS.from_documents(split_docs, embeddings)
+    faiss_index.save_local(DB_FAISS_PATH)  # Save FAISS index locally
+
+retriever = faiss_index.as_retriever(search_kwargs={"k": 4})
+
+### Step 4: RAG Prompt Template ###
+template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+"""
+prompt = PromptTemplate.from_template(template)
+
+### Step 5: Retrieval + Generation Chain ###
+retrieval_chain = (
+    RunnableParallel({
+        "context": retriever,
+        "question": RunnablePassthrough()
+    })
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+
+### Step 6: Run Query ###
+question = "what is llama3? can you highlight 3 important points?"
+print(retrieval_chain.invoke(question))

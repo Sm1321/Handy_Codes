@@ -1,0 +1,93 @@
+#####################  ---------------------------- ############################
+Installtions:-
+! pip install langchain_huggingface -q
+! pip install sentence-transformers -q
+! pip install ipywidgets -q
+! pip install unstructured[pdf] -q
+#####################  ---------------------------- ############################
+
+
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+from langchain_groq.chat_models import ChatGroq
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain_community.document_loaders import PyPDFLoader
+from pathlib import Path
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+import pickle
+from langchain_community.document_loaders import UnstructuredPDFLoader
+
+
+
+
+# === CONFIG ===
+DATA_PATH = "data"
+DB_FAISS_PATH = "vectorstore/faiss_index"
+HUGGINGFACE_REPO_ID = "google/flan-t5-base"
+HF_TOKEN = os.getenv("HF_TOKEN")
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
+
+
+
+##################################33
+### LLM and Embeddings ###
+llm =  ChatGroq(model = "llama-3.1-8b-instant")
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+### Step 1: Load Text Files ###
+loader = DirectoryLoader('./data', glob="*.pdf", loader_cls = PyPDFLoader)
+docs = loader.load()
+
+### Step 2: Split into Chunks ###
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size = CHUNK_SIZE,
+    chunk_overlap = CHUNK_OVERLAP
+)
+split_docs = text_splitter.split_documents(docs)
+
+### Step 3: Create or Load FAISS Vector DB ###
+DB_FAISS_PATH = "./faiss_index"
+
+if os.path.exists(DB_FAISS_PATH):
+    # Load FAISS index from disk
+    faiss_index = FAISS.load_local(DB_FAISS_PATH, embeddings, allow_dangerous_deserialization=True)
+else:
+    # Create FAISS index from documents
+    faiss_index = FAISS.from_documents(split_docs, embeddings)
+    faiss_index.save_local(DB_FAISS_PATH)  # Save FAISS index locally
+
+retriever = faiss_index.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+
+
+### Step 4: RAG Prompt Template ###
+template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+"""
+prompt = PromptTemplate.from_template(template)
+
+### Step 5: Retrieval + Generation Chain ###
+retrieval_chain = (
+    RunnableParallel({
+        "context": retriever,
+        "question": RunnablePassthrough()
+    })
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+
+### Step 6: Run Query ###
+question = "what is llama2? can you highlight 2 important points?"
+print(retrieval_chain.invoke(question))
+

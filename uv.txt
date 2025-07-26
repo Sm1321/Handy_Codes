@@ -13,3 +13,66 @@
 - uv python install python version
 
 - uv pip list ### to see the list of libraries installed
+
+
+############################################################################################################################################################
+# 🐍 Python : Virtual Environment Management with `uv` (Cross-platform)
+
+[`uv`](https://github.com/astral-sh/uv) is a super-fast Python package manager that also supports creating virtual environments. Here’s how to manage virtual environments using `uv` on **Windows**, **Linux**, and **macOS**.
+
+---
+
+## 📦 Step 1: Install `uv`
+
+Make sure you have Python 3.12 installed.
+
+```bash
+# Using pipx (recommended)
+pipx install uv
+
+# Or via pip
+pip install uv
+
+# Create environment
+# Syntax
+uv venv <env_name>
+
+# Example
+uv venv myenv
+
+# Activate
+myenv\Scripts\activate -> Windows
+source myenv/bin/activate -> Mac/Linux
+
+# Deactivate
+deactivate
+```
+-------------------------------------------
+################ OR #######################
+-------------------------------------------
+
+```bash
+uv venv --python 3.11
+source .venv/bin/activate
+Deactivate
+
+uv pip install -r req.txt
+
+rm -rf myenv
+
+# Create new uv environment and install 
+requirements 
+uv venv myenv 
+source myenv/bin/activate 
+uv pip install -r requirements.txt
+
+uv sync
+
+uv venv --python 3.11 myenv 
+
+source myenv/bin/activate 
+
+uv pip install -r requirements.txt
+
+uv add -r requirements.txt
+```
