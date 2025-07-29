@@ -2,3 +2,4 @@ import streamlit as st
 
 
 #### To run the application in diffrent port
+streamlit run app.py --server.port 8080
