@@ -6,3 +6,4 @@
     -  For Conda Env
     -  For Python env
     -  for uv 
+- Updated with Folders
