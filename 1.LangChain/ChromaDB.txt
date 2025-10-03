@@ -1,0 +1,44 @@
+## langchain imports
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import TextLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain.schema import Document
+
+## vectorstores
+from langchain_community.vectorstores import Chroma
+
+## utility imports
+import numpy as np
+from typing import List
+
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+sample_text = "MAchine LEarning is fascinating"
+
+embeddings = OpenAIEmbeddings()
+
+
+print(embeddings)
+
+vector = embeddings.embed_query(sample_text)
+
+print(vector)
+
+print(chunks)
+
+
+
+## Create a Chromdb vector store
+persist_directory = "./chroma_db"
+
+## Initialize Chromadb with Open AI embeddings
+vectorstore = Chroma.from_documents(
+    documents = chunks,
+    embedding = OpenAIEmbeddings(),
+    persist_directory = persist_directory,
+    collection_name = "rag_collection"
+
+)
+
+print(f"Vector store created with {vectorstore._collection.count()} vectors")
+print(f"Persisted to: {persist_directory}")
