@@ -13,6 +13,20 @@
 - uv python install python version
 
 - uv pip list ### to see the list of libraries installed
+__________________________________________________________________________________
+----- Commands for creating a env and installing the requirements.txt -------
+uv init
+uv python list
+uv venv <env_name> –python <python_version either 3.11 or 3.12>
+Activate the env
+Then install requirements.txt
+__________________________________________________________________________________________________________
+Ex:- 
+1. uv init
+2. uv python list
+3. uv venv sematic_uv_env --python cpython-3.13.5-windows-x86_64-none
+4.sematic_uv_env\Scripts\activate
+
 
 
 ############################################################################################################################################################
